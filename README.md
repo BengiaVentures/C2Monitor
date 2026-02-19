@@ -1,6 +1,6 @@
 # C2Monitor
 
-Lightweight Command & Control beacon detection for Windows. Enterprise-grade C2 detection without the enterprise price tag.
+Lightweight Command & Control beacon detection for Windows. Catches malware callbacks that your antivirus misses.
 
 ## What It Does
 
@@ -15,19 +15,28 @@ C2Monitor detects malware that has already bypassed your antivirus and is "phoni
 - **Lateral movement** - outbound RDP connections from your workstation
 - **Unsigned executables** making network connections from temp folders
 
-## Quick Install
+## Install
 
-Open PowerShell **as Administrator** and run:
+### Option 1: Download and review first (recommended)
+
+```powershell
+# Download
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/BengiaVentures/C2Monitor/main/Install-C2Monitor.ps1" -OutFile "$env:TEMP\Install-C2Monitor.ps1"
+
+# Review the script before running it
+notepad "$env:TEMP\Install-C2Monitor.ps1"
+
+# Run as Administrator
+Start-Process powershell -Verb RunAs -ArgumentList "-ExecutionPolicy Bypass -File $env:TEMP\Install-C2Monitor.ps1"
+```
+
+### Option 2: One-liner
 
 ```powershell
 irm https://raw.githubusercontent.com/BengiaVentures/C2Monitor/main/Install-C2Monitor.ps1 | iex
 ```
 
-Or download and run manually:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File Install-C2Monitor.ps1
-```
+> **Note:** You should always review scripts before running them, especially security tools. The full source is available in this repo and in the [`src/`](src/) directory for easy reading.
 
 ## What Gets Installed
 
@@ -39,6 +48,8 @@ powershell -ExecutionPolicy Bypass -File Install-C2Monitor.ps1
 | **Notifier** | Desktop toast alerts | ~75 MB RAM, always running in your session |
 
 **Total persistent footprint: ~120 MB RAM**
+
+All data stays on your machine. No cloud. No subscription. No telemetry.
 
 ## How Detection Works
 
@@ -54,6 +65,18 @@ DNS queries logged by Sysmon are analyzed for **Shannon entropy**. Domains with 
 ### Process Lineage
 Sysmon process creation events are checked for suspicious parent-child relationships (e.g., `WINWORD.EXE` spawning `powershell.exe`), which is the classic phishing attack chain.
 
+## Configuration
+
+After installation, edit `C:\ProgramData\C2Monitor\config.json` to customize:
+
+- **Trusted processes** - whitelist apps you know are safe (browsers, VPN, etc.)
+- **C2 ports** - add/remove ports to monitor
+- **Scan intervals** - adjust sample count and timing
+- **Alert cooldown** - how long before the same alert can fire again (default: 60 min)
+- **Threat intel refresh** - how often to update C2 IP list (default: 6 hours)
+
+See [`src/config.default.json`](src/config.default.json) for the full default configuration.
+
 ## Alerts
 
 When something is detected, you get:
@@ -61,7 +84,14 @@ When something is detected, you get:
 2. **Log entry** at `C:\ProgramData\C2Monitor\alerts.log`
 3. **Windows Event Log** entry (Application > Source: C2Monitor)
 
-Each alert includes: severity, description, process name, PID, full file path, remote IP:port, and SHA256 hash of the suspicious file.
+Each alert includes: severity, description, process name, PID, full file path, remote IP:port, and SHA256 hash of the suspicious file. Duplicate alerts are suppressed for 60 minutes (configurable) to prevent notification fatigue.
+
+## Security
+
+- Install directory is ACL-locked: only SYSTEM and Administrators can write, preventing script tampering by malware
+- Scans run as SYSTEM via scheduled tasks for tamper resistance
+- Connection history uses file-level locking to prevent corruption
+- All downloads enforce TLS 1.2
 
 ## Uninstall
 
@@ -77,6 +107,10 @@ Cleanly removes everything: Sysmon, scheduled tasks, registry entries, and optio
 - PowerShell 5.1+ (included with Windows)
 - Administrator privileges (for Sysmon and scheduled tasks)
 - ~120 MB RAM
+
+## Disclaimer
+
+This is a supplementary detection tool provided as-is under the MIT license. It does not replace professional security software or services. See [LICENSE](LICENSE) for full terms.
 
 ## License
 

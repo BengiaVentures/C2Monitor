@@ -1,0 +1,11 @@
+*.log
+*.json
+*.txt
+!config.default.json
+threat-intel-ips.txt
+connection-history.json
+alerts*.log
+.vs/
+.vscode/
+*.suo
+*.user
